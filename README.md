@@ -6,6 +6,8 @@ FastAPI implementation of the BUP CSE Fest 2026 GridWise challenge. The request 
 
 ## Run locally
 
+[GridWise Energy Optimizer](https://minimalminds.onrender.com/)
+
 Requires Python 3.11 and a Gemini API key for optimization requests. The service fails closed when the key is missing so operator notes can never silently bypass the mandatory LLM stage. The default Gemini model is `gemini-3.6-flash`; set `GEMINI_MODEL` explicitly when using another supported model.
 
 ```bash
@@ -58,7 +60,3 @@ docker run --rm -p 8000:8000 -e GEMINI_API_KEY="$GEMINI_API_KEY" gridwise:2026
 For Render, create a **Web Service** from this repository, choose Docker, and add `GEMINI_API_KEY` as a secret environment variable. Render uses the Dockerfile and publishes port 8000. Never commit `.env` or a key.
 
 Render can also use the included `render.yaml` Blueprint. Set the `GEMINI_API_KEY` secret when prompted; the Blueprint supplies the model name and uses the Dockerfile startup command.
-
-## Known limitations
-
-Gemini failures or a missing key are returned as a 502 so a stale or invented directive cannot silently reach the optimizer. Infeasible combinations of reserves, windows, and battery limits return 422.
