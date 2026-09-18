@@ -6,7 +6,7 @@ FastAPI implementation of the BUP CSE Fest 2026 GridWise challenge. The request 
 
 ## Run locally
 
-Requires Python 3.11 and a Gemini API key for optimization requests. The service fails closed when the key is missing so operator notes can never silently bypass the mandatory LLM stage.
+Requires Python 3.11 and a Gemini API key for optimization requests. The service fails closed when the key is missing so operator notes can never silently bypass the mandatory LLM stage. The default Gemini model is `gemini-3.6-flash`; set `GEMINI_MODEL` explicitly when using another supported model.
 
 ```bash
 python3.11 -m venv .venv
