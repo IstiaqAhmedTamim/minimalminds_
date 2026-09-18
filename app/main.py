@@ -1,4 +1,7 @@
+import os
+
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from .guardrails import validate_directives
 from .interpreter import interpret_notes
@@ -7,6 +10,14 @@ from .optimizer import optimize
 from .replay import validate_plan
 
 app = FastAPI(title="GridWise Energy Optimizer", version="1.0.0")
+cors_origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "*").split(",") if origin.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

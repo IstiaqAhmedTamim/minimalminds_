@@ -16,7 +16,7 @@ cp .env.example .env  # edit GEMINI_API_KEY in this untracked file
 uvicorn app.main:app --reload
 ```
 
-The service loads `GEMINI_API_KEY` and optional `GEMINI_MODEL` from `.env` locally. In Render or Docker, configure them as environment variables instead. Do not commit `.env`.
+The service loads `GEMINI_API_KEY`, optional `GEMINI_MODEL`, and optional `CORS_ORIGINS` from `.env` locally. In Render or Docker, configure them as environment variables instead. Set `CORS_ORIGINS` to a comma-separated origin allowlist in production; `*` is the development default. Do not commit `.env`.
 
 Endpoints:
 
