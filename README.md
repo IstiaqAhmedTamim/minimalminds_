@@ -1,62 +1,286 @@
 # GridWise LLM Energy Optimizer
 
-FastAPI implementation of the BUP CSE Fest 2026 GridWise challenge. The request path is deliberately explicit:
+FastAPI implementation of the **BUP CSE Fest 2026 – GridWise LLM Energy Optimization Challenge**.
 
-`operator_notes` -> Gemini 2.5 Flash -> Pydantic/deterministic guardrails -> PuLP/CBC optimizer -> independently assembled response.
+The complete request pipeline is:
 
-## Run locally
+`operator_notes → Gemini 2.5 Flash → Pydantic Guardrails → PuLP/CBC Optimizer → Validated JSON Response`
 
-[GridWise Energy Optimizer](https://minimalminds.onrender.com/)
+---
 
-Requires Python 3.11 and a Gemini API key for optimization requests. The service fails closed when the key is missing so operator notes can never silently bypass the mandatory LLM stage. The default Gemini model is `gemini-3.6-flash`; set `GEMINI_MODEL` explicitly when using another supported model.
+## Live Deployment
+
+**Render API:** https://minimalminds.onrender.com/
+
+**Swagger Docs:** https://minimalminds.onrender.com/docs
+
+**Health Check:** https://minimalminds.onrender.com/health
+
+---
+
+## Features
+
+* LLM-powered interpretation of natural language operator notes
+* Deterministic guardrails for validation
+* Cost-optimized 24-hour energy scheduling using PuLP
+* FastAPI REST API with OpenAPI/Swagger documentation
+* Docker & Render deployment ready
+* Public sample validation script included
+
+---
+
+## Project Structure
+
+```text
+minimalminds/
+│
+├── app/
+│   ├── main.py
+│   ├── routes.py
+│   ├── models.py
+│   ├── llm.py
+│   ├── guardrails.py
+│   ├── optimizer.py
+│   └── config.py
+│
+├── scripts/
+│   └── check_samples.py
+│
+├── tests/
+├── Dockerfile
+├── requirements.txt
+├── .env.example
+├── render.yaml
+└── README.md
+```
+
+---
+
+## Run Locally
+
+### Requirements
+
+* Python 3.11+
+* Gemini API Key
+
+### Installation
 
 ```bash
-python3.11 -m venv .venv
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# Linux/macOS
 source .venv/bin/activate
+
 pip install -r requirements.txt
-cp .env.example .env  # edit GEMINI_API_KEY in this untracked file
+```
+
+Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Configure your Gemini credentials:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Start the server:
+
+```bash
 uvicorn app.main:app --reload
 ```
 
-The service loads `GEMINI_API_KEY`, optional `GEMINI_MODEL`, and optional `CORS_ORIGINS` from `.env` locally. In Render or Docker, configure them as environment variables instead. Set `CORS_ORIGINS` to a comma-separated origin allowlist in production; `*` is the development default. Do not commit `.env`.
+Local API:
 
-Endpoints:
+* http://localhost:8000
+* http://localhost:8000/docs
+
+---
+
+## API Endpoints
+
+### Health Check
+
+```http
+GET /health
+```
+
+Example:
 
 ```bash
 curl http://localhost:8000/health
-curl -X POST http://localhost:8000/optimize-energy \
-	-H 'content-type: application/json' \
-	--data @scenario.json
 ```
 
-The POST body contains `scenario_id`, 1-3 `operator_notes`, exactly 24 ordered `hours`, and the `battery` limits described in the challenge. Swagger is available at `/docs`.
+Response:
 
-## Public sample validation
+```json
+{
+  "status": "ok"
+}
+```
 
-Save the organizer-provided public sample pack as `public_samples.json`, start the service with `GEMINI_API_KEY` configured, then run:
+### Optimize Energy
+
+```http
+POST /optimize-energy
+```
+
+Example:
 
 ```bash
-python scripts/check_samples.py public_samples.json --base-url http://localhost:8000
+curl -X POST http://localhost:8000/optimize-energy \
+  -H "Content-Type: application/json" \
+  --data @scenario.json
 ```
 
-The runner posts every case and checks the scenario ID, one interpretation per note, and all 24 plan entries. The judge remains the source of truth for equivalent optimal schedules.
+The request must contain:
 
-## Design notes
+* `scenario_id`
+* `operator_notes` (1–3 notes)
+* `hours` (exactly 24 hourly entries)
+* `battery` configuration
 
-- Gemini is prompted for strict JSON and exactly one directive per note. The model is never allowed to directly write a schedule.
-- Guardrails reject unknown directive types, malformed adjustment shapes, invalid hours, invalid factors, and incorrect note indexes. No-op directives must have `applies: false` and a null adjustment.
-- PuLP minimizes tariff-weighted grid import while enforcing balance, solar availability, charge/discharge limits, reserves, grid caps, and end-of-day battery neutrality.
-- Response totals are recalculated from the returned hourly plan and rounded to six decimal places.
-- A final deterministic replay validates effective solar, every directive window, battery transitions, energy balance, bounds, and end-of-day neutrality before the response is returned.
-- The API requires `GEMINI_API_KEY`; it never silently treats notes as `no_op` when Gemini is unavailable.
+---
 
-## Docker and Render
+## Test the Live API
+
+You can test the deployed API directly without running locally.
+
+Open:
+
+**https://minimalminds.onrender.com/docs**
+
+1. Expand **POST /optimize-energy**
+2. Click **Try it out**
+3. Paste a sample scenario JSON
+4. Click **Execute**
+
+A successful response includes:
+
+```json
+{
+  "scenario_id": "...",
+  "directive_interpretation": [...],
+  "hourly_plan": [...],
+  "total_cost_bdt": 0,
+  "peak_grid_kwh": 0,
+  "plan_summary": "..."
+}
+```
+
+---
+
+## Public Sample Validation
+
+Run all organizer public sample cases against either the local server or the deployed Render API.
+
+### Local
+
+```bash
+python scripts/check_samples.py public_samples.json \
+  --base-url http://localhost:8000
+```
+
+### Render
+
+```bash
+python scripts/check_samples.py public_samples.json \
+  --base-url https://minimalminds.onrender.com
+```
+
+Expected output:
+
+```text
+SAMPLE-01 PASS
+SAMPLE-02 PASS
+...
+SAMPLE-10 PASS
+```
+
+---
+
+## Architecture
+
+```text
+Operator Notes
+       │
+       ▼
+ Gemini 2.5 Flash
+       │
+       ▼
+ Deterministic Guardrails
+       │
+       ▼
+ PuLP/CBC Optimizer
+       │
+       ▼
+ Validated 24-Hour Energy Plan
+```
+
+### Design Principles
+
+* Gemini interprets **only** natural-language operator notes.
+* The optimizer never trusts raw LLM output directly.
+* Guardrails validate directive types, hours, factors, and numeric values.
+* Every response is replayed deterministically before being returned.
+* Missing or invalid Gemini credentials cause the request to fail safely.
+
+---
+
+## Docker
+
+Build:
 
 ```bash
 docker build -t gridwise:2026 .
-docker run --rm -p 8000:8000 -e GEMINI_API_KEY="$GEMINI_API_KEY" gridwise:2026
 ```
 
-For Render, create a **Web Service** from this repository, choose Docker, and add `GEMINI_API_KEY` as a secret environment variable. Render uses the Dockerfile and publishes port 8000. Never commit `.env` or a key.
+Run:
 
-Render can also use the included `render.yaml` Blueprint. Set the `GEMINI_API_KEY` secret when prompted; the Blueprint supplies the model name and uses the Dockerfile startup command.
+```bash
+docker run --rm \
+  -p 8000:8000 \
+  -e GEMINI_API_KEY=your_key \
+  gridwise:2026
+```
+
+---
+
+## Deploy on Render
+
+1. Create a **New Web Service**
+2. Connect this GitHub repository
+3. Select **Docker**
+4. Add the environment variable:
+
+```text
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+Render automatically builds the Docker image and deploys the API.
+
+**Live URL:** https://minimalminds.onrender.com/
+
+---
+
+## Environment Variables
+
+| Variable         | Required | Description                     |
+| ---------------- | -------- | ------------------------------- |
+| `GEMINI_API_KEY` | Yes      | Gemini API credential           |
+| `GEMINI_MODEL`   | No       | Default: `gemini-2.5-flash`     |
+| `CORS_ORIGINS`   | No       | Comma-separated allowed origins |
+
+> Never commit `.env` or API keys to the repository.
+
+---
+
+## License
+
+Developed for **BUP CSE Fest 2026 Hackathon – GridWise LLM Energy Optimization Challenge**.
