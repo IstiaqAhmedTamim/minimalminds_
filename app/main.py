@@ -1,6 +1,7 @@
 import os
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .guardrails import validate_directives
@@ -20,14 +21,20 @@ app.add_middleware(
 )
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {
-        "service": "GridWise Energy Optimizer",
-        "health": "/health",
-        "docs": "/docs",
-        "optimize": "/optimize-energy",
-    }
+@app.get("/", response_class=HTMLResponse)
+def root() -> str:
+        return """<!doctype html>
+<html lang="en">
+    <head><meta charset="utf-8"><title>GridWise Energy Optimizer</title></head>
+    <body>
+        <h1>GridWise Energy Optimizer</h1>
+        <ul>
+            <li><a href="/health">Health check</a></li>
+            <li><a href="/docs">Interactive API docs</a></li>
+            <li><a href="/docs#/default/optimize_energy_optimize_energy_post">Optimize energy endpoint</a> (POST)</li>
+        </ul>
+    </body>
+</html>"""
 
 
 @app.get("/health")
