@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class HourInput(BaseModel):
+class HourEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     hour: int = Field(ge=0, le=23)
@@ -12,7 +12,7 @@ class HourInput(BaseModel):
     tariff_bdt_per_kwh: float = Field(ge=0)
 
 
-class BatteryInput(BaseModel):
+class BatteryConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     capacity_kwh: float = Field(gt=0)
@@ -38,17 +38,17 @@ class BatteryInput(BaseModel):
         return value
 
 
-class OptimizeRequest(BaseModel):
+class ScenarioRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     scenario_id: str = Field(min_length=1)
     operator_notes: list[str] = Field(min_length=1, max_length=3)
-    hours: list[HourInput] = Field(min_length=24, max_length=24)
-    battery: BatteryInput
+    hours: list[HourEntry] = Field(min_length=24, max_length=24)
+    battery: BatteryConfig
 
     @field_validator("hours")
     @classmethod
-    def hours_must_be_complete(cls, value: list[HourInput]):
+    def hours_must_be_complete(cls, value: list[HourEntry]):
         numbers = [item.hour for item in value]
         if numbers != list(range(24)):
             raise ValueError("hours must contain unique hours 0 through 23 in ascending order")
@@ -72,7 +72,7 @@ DirectiveType = Literal[
 ]
 
 
-class Directive(BaseModel):
+class DirectiveInterpretation(BaseModel):
     note_index: int = Field(ge=0)
     applies: bool
     directive_type: DirectiveType
@@ -80,7 +80,7 @@ class Directive(BaseModel):
     explanation: str = Field(min_length=1)
 
 
-class HourPlan(BaseModel):
+class HourlyPlan(BaseModel):
     hour: int
     grid_kwh: float
     solar_used_kwh: float
@@ -89,11 +89,20 @@ class HourPlan(BaseModel):
     battery_energy_after_kwh: float
 
 
-class OptimizeResponse(BaseModel):
+class OptimizationResponse(BaseModel):
     scenario_id: str
-    directive_interpretation: list[Directive]
-    hourly_plan: list[HourPlan]
+    directive_interpretation: list[DirectiveInterpretation]
+    hourly_plan: list[HourlyPlan]
     total_grid_kwh: float
     total_cost_bdt: float
     peak_grid_kwh: float
     plan_summary: str
+
+
+# Backward-compatible internal names used by the optimizer modules.
+HourInput = HourEntry
+BatteryInput = BatteryConfig
+OptimizeRequest = ScenarioRequest
+Directive = DirectiveInterpretation
+HourPlan = HourlyPlan
+OptimizeResponse = OptimizationResponse

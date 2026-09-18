@@ -16,7 +16,7 @@ cp .env.example .env  # edit GEMINI_API_KEY in this untracked file
 uvicorn app.main:app --reload
 ```
 
-The service loads `GEMINI_API_KEY` and optional `GEMINI_MODEL` from `.env` locally. In Render or Docker, configure them as environment variables instead. Do not commit `.env`.
+The service loads `GEMINI_API_KEY`, optional `GEMINI_MODEL`, and optional `CORS_ORIGINS` from `.env` locally. In Render or Docker, configure them as environment variables instead. Set `CORS_ORIGINS` to a comma-separated origin allowlist in production; `*` is the development default. Do not commit `.env`.
 
 Endpoints:
 
@@ -56,6 +56,8 @@ docker run --rm -p 8000:8000 -e GEMINI_API_KEY="$GEMINI_API_KEY" gridwise:2026
 ```
 
 For Render, create a **Web Service** from this repository, choose Docker, and add `GEMINI_API_KEY` as a secret environment variable. Render uses the Dockerfile and publishes port 8000. Never commit `.env` or a key.
+
+Render can also use the included `render.yaml` Blueprint. Set the `GEMINI_API_KEY` secret when prompted; the Blueprint supplies the model name and uses the Dockerfile startup command.
 
 ## Known limitations
 
